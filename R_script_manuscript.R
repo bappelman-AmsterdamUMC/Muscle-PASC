@@ -30,10 +30,7 @@ boxcoxT <- function(MedX){
   #hist(metabs$MedLevT)
   
   return(scale(metabs$MedLevT))
-  }
-
-
-
+}
 
 # Extended Table 1 --------------------------------------------------------
 PASC <- read_excel("Source data.xlsx", sheet = "Extended data table 1")
@@ -153,11 +150,14 @@ PASC_1D$Time <- factor(PASC_1D$Time, levels =c("HHB 40%W", "HHB 60%W", "HHB 80%W
 
 
 model <-lme(value ~ Time*Group, data=PASC_1D, random = ~ Time|ID, na.action = na.omit, control="optim")
-anova(model)
+Anova(model, type="III")
+#no interaction, use type II
+Anova(model, type="II")
 
 
 #figure
 PASC_1D_fig$Time <- factor(PASC_1D_fig$Time, levels =c("HHB 0%W", "HHB 20%W", "HHB 40%W", "HHB 60%W", "HHB 80%W", "HHB 100%W"))
+
 down_sd <- function(x) {
   data.frame(ymin = mean(x,na.rm=TRUE)-sd(x,na.rm=TRUE), # minimum
              ymax= mean(x,na.rm=TRUE))
@@ -183,7 +183,6 @@ rel_power_graph<-ggplot(PASC_1D_fig, aes(x=Time, y=value, width=0.12, group=Grou
         panel.background = element_rect(fill="white", colour = "white"),
         panel.grid.major = element_blank(),
         panel.grid.major.x = element_blank(),
-        axis.title = element_text(size = rel(2)),
         axis.title.y = element_text(angle = 90, vjust = 1),
         axis.title.x = element_text(angle = 0, vjust = -0.2))+
   scale_x_discrete(labels=c("0","20","40","60","80","100"))+
@@ -192,21 +191,23 @@ rel_power_graph<-ggplot(PASC_1D_fig, aes(x=Time, y=value, width=0.12, group=Grou
 rel_power_graph
   
 
+
+
 #panel E
   PASC_1E <- read_excel("Source data.xlsx", sheet = "Figure1_panel_E") 
-  model <-lme(HHb ~ Power*Group, data=PASC_1E, random = ~ 1|ID, na.action = na.omit, control="optim")
-  anova(model)
+  PASC_1E$Group <- as.factor(PASC_1E$Group)
   
+  model2 <-lme(HHb ~ Power*Group, data=PASC_1E, random = ~ 1|ID, na.action = na.omit, control="optim")
+  Anova(model2, type="III") #0.058 interaction term
+
   
-  PASC_1E_fig<-  ggplot(data=  PASC_1E[  PASC_1E$Power>30,], aes(x=Power, y=HHb))+
-    geom_vline(xintercept=194.1739, colour="red", linetype="dotted", size=1.5)+
-    geom_vline(xintercept=252.0476, colour="black", linetype="dotted", size=1)+
-    stat_summary(data=PASC_1D2[PASC_1D2$Group=="Healthy" & PASC_1D2$Power<252.0476 ,],fun.y='mean',geom="line")+
-    stat_summary(data=PASC_1D2[PASC_1D2$Group=="Long COVID" & PASC_1D2$Power<194.1739,],fun.y='mean',geom="line")+
-    stat_summary(data=PASC_1D2[PASC_1D2$Group=="Healthy" & PASC_1D2$Power<252.0476 ,],fun.data=up_sd,geom="errorbar",width=4)+
-    stat_summary(data=PASC_1D2[PASC_1D2$Group=="Long COVID" & PASC_1D2$Power<194.1739,],fun.data = down_sd, geom="errorbar", width=4)+
-    stat_summary(data=PASC_1D2[PASC_1D2$Group=="Healthy" & PASC_1D2$Power<252.0476 ,] ,fun.y='mean',geom="point", col='black',fill="white",aes(fill="Healthy"), shape=21,size=8)+
-    stat_summary(data=PASC_1D2[PASC_1D2$Group=="Long COVID" & PASC_1D2$Power<194.1739,] ,fun.y='mean',geom="point", col='black', fill="red",aes(fill="Long COVID"), shape=21,size=8)+
+  PASC_1E_fig<-  ggplot(data=  PASC_1E, aes(x=Power, y=HHb))+
+    stat_summary(data=PASC_1E[PASC_1E$Group=="Healthy",],fun.y='mean',geom="line")+
+    stat_summary(data=PASC_1E[PASC_1E$Group=="Long COVID",],fun.y='mean',geom="line")+
+    stat_summary(data=PASC_1E[PASC_1E$Group=="Healthy",],fun.data=up_sd,geom="errorbar",width=4)+
+    stat_summary(data=PASC_1E[PASC_1E$Group=="Long COVID",],fun.data = down_sd, geom="errorbar", width=4)+
+    stat_summary(data=PASC_1E[PASC_1E$Group=="Healthy",] ,fun.y='mean',geom="point", col='black',fill="white",aes(fill="Healthy"), shape=21,size=8)+
+    stat_summary(data=PASC_1E[PASC_1E$Group=="Long COVID",] ,fun.y='mean',geom="point", col='black', fill="red",aes(fill="Long COVID"), shape=21,size=8)+
     scale_colour_manual(labels=c("Long COVID"="Long COVID","Healthy"="Healthy"),values = c("Long COVID"="red","Healthy"="black"))+
     theme(legend.position = c(0.3,0.80),
           legend.direction = "horizontal",
@@ -217,9 +218,13 @@ rel_power_graph
           axis.title.y = element_text(angle = 90, vjust = 1),
           axis.title.x = element_text(angle = 0, vjust = -0.2))+
     scale_y_continuous(limits=c(0,101), breaks=c(0,25,50,75,100), expand=c(0,0))+
+    scale_x_continuous(limits=c(40,200), breaks=c(0,50, 75,100, 125, 150, 175), expand=c(0,0))+
     xlab("Work Rate (W)")+
-    ylab("\u0394 Deoxy[heme] (% Max)")
+    ylab("\u0394 Deoxy[heme] (%max)")
   PASC_1E_fig
+  
+  
+  
   
   
 # Figure 2 ----------------------------------------------------------------
@@ -281,45 +286,47 @@ rel_power_graph
     stat_cor(aes(color = Group))
   Fig_cap_vo2
   
-#Panel D -fiber type distribution
+  
+#Panel D -fiber type distribution by percentage of number of fibers
 fiber <- read_excel("Source data.xlsx", sheet = "Figure2")
 
-p_norm <- sapply(fiber[,c(5:8)], shapiro.test)
+p_norm <- sapply(fiber[,c(9:12)], shapiro.test)
 p_norm
-#Type I-IIa hybdrid and Type_IIx not normally distributed
-hist(fiber$I_IIa_hybrid)
-hist(fiber$type_IIx)
+#Type_IIx_and hybrids and total_hybrids not normally distributed
+hist(fiber$perc_number_fibers_total_hybrids)
+hist(fiber$`perc_number_fibers_Type_IIx_and_hybrids`)
 
 fiberbox <- fiber
-fiberbox[,5:8] <- apply(fiberbox[,5:8], 2, function(x) boxcoxT(x))
-p_norm <- sapply(fiberbox[,c(5:8)], shapiro.test)
+fiberbox[,9:12] <- apply(fiberbox[,9:12], 2, function(x) boxcoxT(x))
+p_norm <- sapply(fiberbox[,c(9:12)], shapiro.test)
 p_norm
-#type_IIx now normally distributed, I_IIa_hybrid not. 
+#Type_IIx_and hybrids not normally distributed, total_hybrid are
 
-wilcox.test(fiber$I_IIa_hybrid ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.45
-t.test(fiber$type_I ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.015
-t.test(fiber$type_IIa ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.95
-t.test(fiberbox$type_IIx ~ fiberbox$Group, paired = F, alternative = "two.sided") #p = 0.013
+t.test(fiber$perc_number_fibers_Type_I_and_hybrids ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.16
+t.test(fiber$perc_number_fibers_Type_IIa    ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.25
+wilcox.test(fiber$`perc_number_fibers_Type_IIx_and_hybrids` ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.03
+t.test(fiberbox$perc_number_fibers_total_hybrids ~ fiberbox$Group, paired = F, alternative = "two.sided") #p = 0.003
 
 #sensitivity
-wilcox.test(fiber$I_IIa_hybrid ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.45
-wilcox.test(fiber$type_I ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.01425
-wilcox.test(fiber$type_IIa ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.87
-wilcox.test(fiberbox$type_IIx ~ fiberbox$Group, paired = F, alternative = "two.sided") #p = 0.02288
+wilcox.test(fiber$perc_number_fibers_Type_I_and_hybrids ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.25
+wilcox.test(fiber$perc_number_fibers_Type_IIa    ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.25
+wilcox.test(fiber$`perc_number_fibers_Type_IIx_and_hybrids` ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.04
+wilcox.test(fiberbox$perc_number_fibers_total_hybrids ~ fiberbox$Group, paired = F, alternative = "two.sided") #p = 0.005
 
-fiber2 <- subset(fiber, select =c(ID, Group, I_IIa_hybrid,type_I, type_IIa, type_IIx))
+
+fiber2 <- subset(fiber, select =c(ID, Group, perc_number_fibers_Type_I_and_hybrids,perc_number_fibers_Type_IIa, perc_number_fibers_Type_IIx_and_hybrids, perc_number_fibers_total_hybrids))
 fiber3 <- reshape2::melt(fiber2, id.vars=c("ID", "Group"))
 fiber3$Group <- as.factor(fiber3$Group)
 
-fibperc<- ggplot(data  = fiber3, aes(x = variable, y = value)) +
+fibperc_number<- ggplot(data  = fiber3, aes(x = variable, y = value)) +
   geom_boxplot(aes(fill = Group), width = 0.6, position = position_dodge(width = 0.7), outlier.shape = NA) +
-  geom_point(aes(fill = Group), size = 2,  alpha = 0.7, shape = 21, position = position_dodge(width=0.7)) +
+  geom_point(aes(fill = Group), size = 4,  alpha = 0.7, shape = 21, position = position_dodge(width=0.7)) +
   theme_bw() + 
   theme(aspect.ratio = 1/1) + 
   scale_fill_manual(values=c("#FFFFFF", "#FF0000"))+
   geom_signif(annotation = formatC("ns", digits = 1), y_position = 0.96, xmin = 0.82, xmax = 1.15, tip_length = c(0.01, 0.01))+
-  geom_signif(annotation = formatC("*", digits = 1), y_position = 0.96, xmin =1.82, xmax = 2.15, tip_length = c(0.01, 0.01))+
-  geom_signif(annotation = formatC("ns", digits = 1), y_position = 0.96, xmin = 2.82, xmax = 3.15, tip_length = c(0.01, 0.01))+
+  geom_signif(annotation = formatC("ns", digits = 1), y_position = 0.96, xmin =1.82, xmax = 2.15, tip_length = c(0.01, 0.01))+
+  geom_signif(annotation = formatC("*", digits = 1), y_position = 0.96, xmin = 2.82, xmax = 3.15, tip_length = c(0.01, 0.01))+
   geom_signif(annotation = formatC("*", digits = 1), y_position = 0.96, xmin = 3.82, xmax = 4.15, tip_length = c(0.01, 0.01))+
   ggtitle("Fiber type distribution")+
   theme(plot.title = element_text(hjust = 0.5, size = 12))+
@@ -328,7 +335,7 @@ fibperc<- ggplot(data  = fiber3, aes(x = variable, y = value)) +
   theme(axis.line = element_line(color = 'black'))+
   scale_y_continuous(expand = c(0, 0), limits = c(0, 1))+
   ylab("Percentage (%)")
-fibperc
+fibperc_number
 
 
 
@@ -373,7 +380,7 @@ anova_result$"Pr(>F)"[1]
 
 
 
-#Panel G - Vo2max / SDH
+#Panel F - Vo2max / SDH
 PASC_VO2SDH <-  filter(PASC, !is.na(PASC$SDH))
 PASC_VO2SDH <-  filter(PASC_VO2SDH, !is.na(PASC_VO2SDH$VO2max))
 VO2_SDH <- ggscatter(PASC, x = "SDH", y = "VO2max",
@@ -400,22 +407,6 @@ comparison_result <- cocor.indep.groups(
 
 # Print the comparison result
 print(comparison_result)
-
-#calculate difference in intercept. 
-model_group1 <- lm(y[group == "Healthy"] ~ x[group == "Healthy"])
-model_group2 <- lm(y[group == "Long COVID"] ~ x[group == "Long COVID"])
-
-# Perform ANCOVA to test for intercept difference
-anova_result <- anova(model_group1, model_group2)
-
-# Extract p-value from the ANCOVA result
-anova_result$"Pr(>F)"[1]
-
-
-
-
-
-
 
 
 # Figure 3 ----------------------------------------------------------------
@@ -1181,6 +1172,54 @@ fibmale
 t.test(extfig4$CSA1 ~ extfig4$Group, paired = F, alternative = "two.sided") #p = 0.02 *
 t.test(extfig4$CSA2a ~ extfig4$Group, paired = F, alternative = "two.sided") #p = 0.43
 wilcox.test(extfig4$CSA2x ~ extfig4$Group, paired = F, alternative = "two.sided") #p = 0.44
+
+
+#Panel G -fiber type distribution by percentage area occupied
+fiber <- read_excel("Source data.xlsx", sheet = "Figure2")
+p_norm <- sapply(fiber[,c(13:15)], shapiro.test)
+p_norm
+#perc_area_Type_IIx  not normally distributed
+hist(fiber$perc_area_Type_IIx_typeIIa_IIx)
+
+
+fiberbox <- fiber
+fiberbox[,13:15] <- apply(fiberbox[,13:15], 2, function(x) boxcoxT(x))
+p_norm <- sapply(fiberbox[,c(13:15)], shapiro.test)
+p_norm
+#perc_area_Type_IIx_typeIIa_IIx normal
+
+
+
+t.test(fiber$perc_area_Type_I_type_I_IIa_hybrids  ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.05
+t.test(fiber$perc_area_Type_IIa_type_I_IIa_IIa_IIx     ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.95
+t.test(fiberbox$perc_area_Type_IIx_typeIIa_IIx ~ fiberbox$Group, paired = F, alternative = "two.sided") #p = 0.013
+
+#sensitivity
+wilcox.test(fiber$perc_area_Type_I_type_I_IIa_hybrids  ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.03
+wilcox.test(fiber$perc_area_Type_IIa_type_I_IIa_IIa_IIx     ~ fiber$Group, paired = F, alternative = "two.sided") #p = 0.88
+wilcox.test(fiberbox$perc_area_Type_IIx_typeIIa_IIx ~ fiberbox$Group, paired = F, alternative = "two.sided") #p = 0.02
+
+fiber2 <- subset(fiber, select =c(ID, Group, perc_area_Type_I_type_I_IIa_hybrids,perc_area_Type_IIa_type_I_IIa_IIa_IIx, perc_area_Type_IIx_typeIIa_IIx))
+fiber3 <- reshape2::melt(fiber2, id.vars=c("ID", "Group"))
+fiber3$Group <- as.factor(fiber3$Group)
+
+fibperc_area<- ggplot(data  = fiber3, aes(x = variable, y = value)) +
+  geom_boxplot(aes(fill = Group), width = 0.6, position = position_dodge(width = 0.7), outlier.shape = NA) +
+  geom_point(aes(fill = Group), size = 4,  alpha = 0.7, shape = 21, position = position_dodge(width=0.7)) +
+  theme_bw() + 
+  theme(aspect.ratio = 1/1) + 
+  scale_fill_manual(values=c("#FFFFFF", "#FF0000"))+
+  geom_signif(annotation = formatC("p=0.05", digits = 1), y_position = 0.9, xmin = 0.82, xmax = 1.16, tip_length = c(0.01, 0.01))+
+  geom_signif(annotation = formatC("ns", digits = 1), y_position = 0.96, xmin =1.82, xmax = 2.15, tip_length = c(0.01, 0.01))+
+  geom_signif(annotation = formatC("*", digits = 1), y_position = 0.96, xmin = 2.82, xmax = 3.15, tip_length = c(0.01, 0.01))+
+  ggtitle("Fiber type distribution")+
+  theme(plot.title = element_text(hjust = 0.5, size = 12))+
+  theme(legend.position = "bottom", axis.title.x = element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  theme(plot.background = element_blank(),panel.grid.major = element_blank(),  panel.grid.minor = element_blank(),  panel.border = element_blank()) +
+  theme(axis.line = element_line(color = 'black'))+
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 1))+
+  ylab("Percentage (%)")
+fibperc_area
 
 
 
