@@ -12,6 +12,7 @@ library(cocor)
 library(ggplot2)
 library(ggsignif)
 library(ggpubr)
+library(dplyr)
 
 #boxcox function
 boxcoxT <- function(MedX){
@@ -32,8 +33,11 @@ boxcoxT <- function(MedX){
   return(scale(metabs$MedLevT))
 }
 
-# Extended Table 1 --------------------------------------------------------
-PASC <- read_excel("Source data.xlsx", sheet = "Extended data table 1")
+
+
+# Table 1 --------------------------------------------------------
+
+PASC <- read_excel("Source data.xlsx", sheet = "Table 1")
 factorVars <- c("sex", "pre_cov_vacc_1")
 vars <- c( "age","sex",  "bmi", "CCI", "Hospitalization", "pre_cov_vacc_1", "pre_cov_werk_uur_1", "post_cov_werk_uur_1", "days_since_infection", "days_since_infection_latest")
 nonnorm <- c("CCI", "days_since_infection", "days_since_infection_latest", "pre_cov_werk_uur_1", "post_cov_werk_uur_1")
@@ -42,8 +46,10 @@ tableOne <- CreateTableOne(vars = vars, data = PASC, strata = "Group",  factorVa
 tab2mat <- print(tableOne, showAllLevels = FALSE, nonnormal = nonnorm, minMax = FALSE, varLabels = TRUE, explain=T, noSpaces = TRUE, missing = TRUE)
 
 
-# Extended Table 2 --------------------------------------------------------
-PASC <- read_excel("Source data.xlsx", sheet = "Extended data table 2")
+
+
+# Table 2 --------------------------------------------------------
+PASC <- read_excel("Source data.xlsx", sheet = "Table 2")
 PASC$Time <- factor(PASC$Time, levels =c("Baseline", "1-day after PEM", "1-week after PEM"))
 
 factorVars <- c("Fatique", "Concentration", "Mucle_joint_pain","Chest_pain", "Dyspnea", "Anosmia", "Sore_troat", "Cold", "Cough")
@@ -62,7 +68,7 @@ PASC$sex <- as.factor(PASC$sex)
 PASC$group <- as.factor(PASC$group)
 
 #Check normality
-p_norm <- sapply(PASC[,c(6:8)], shapiro.test)
+p_norm <- sapply(PASC[,c(5:7)], shapiro.test)
 p_norm
 hist(PASC$VO2max) #check for all variables
 
@@ -235,7 +241,7 @@ rel_power_graph
   p_norm #cap-fiber and vo2 normal, Cap/mm2 not normal distributed. 
   
   #Statistical test
-  wilcox.test(`Cap/mm2` ~ Group, data = capdensity) #0.11
+  wilcox.test(`Cap/mm2` ~ Group, data = capdensity, conf.int = T) #0.11
   
   cap1<- ggplot(data  = capdensity, aes(x = Group, y = `Cap/mm2`)) +
     geom_boxplot(aes(fill = Group), width = 0.6, position = position_dodge(width = 0.7), outlier.shape = NA) +
@@ -648,6 +654,10 @@ Anova(naiveglm, type="III")
 
 n <- emmeans(naiveglm, list(pairwise ~ Group*Time), adjust = "BH")
 pairs(n, simple = "each")
+
+
+
+
 
 
 # CD68 = panel F 
@@ -1589,6 +1599,29 @@ urea$adj.p <- p.adjust(urea$Group, method = "BH")
 
 results_metabolomics <- rbind(amin, carn, glut, glyc, lip, nad, creat, ket, pent, pur,pyr, oth, tca,urea)
 results_metabolomics <- results_metabolomics %>% dplyr::rename(Adjusted_group_p_value = adj.p)
+
+
+#Succinate panel
+metabolomics$Succinate
+succ1<- ggplot(data  = metabolomics, aes(x = Time, y = Succinate)) +
+  geom_boxplot(aes(fill = Group), width = 0.6, position = position_dodge(width = 0.7), outlier.shape = NA) +
+  geom_point(aes(fill = Group), size = 2,  alpha = 0.7, shape = 21, position = position_dodge(width=0.7)) +
+  theme_bw() + 
+  theme(aspect.ratio = 2/1) + 
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.1))
+succ1
+
+succ2<- ggplot(data  = metabolomics, aes(x = Time, y = Succinate)) +
+  geom_boxplot(aes(fill = Group), width = 0.6, position = position_dodge(width = 0.7), outlier.shape = NA) +
+  geom_point(aes(fill = Group), size = 2,  alpha = 0.7, shape = 21, position = position_dodge(width=0.7)) +
+  theme_bw() + 
+  theme(aspect.ratio = 2/1) + 
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 0.5))
+succ2
+
+
+
+
 
 
 #HEDGES G - PANEL A
